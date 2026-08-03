@@ -1,0 +1,1 @@
+Build command: /workspaces/Redowan-CloudStream/gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=512m" --max-workers=2 build --stacktrace

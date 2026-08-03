@@ -3,6 +3,6 @@
     "description": "Redowan's BDIX repository",
     "manifestVersion": 1,
     "pluginLists": [
-      "https://raw.githubusercontent.com/hackershimul07/Redowan-CloudStream/builds/plugins.json"
+      "https://orange-happiness-jwx6xwr97pjc5pxj-8000.app.github.dev"
     ]
 }
