@@ -76,12 +76,13 @@ open class BdixDhakaFlix14Provider : MainAPI() {
 
     override val mainPage = mainPageOf(
         "Animation Movies (1080p)/" to "Animation Movies",
-        "English Movies (1080p)/($year) 1080p/" to "English Movies",
-        "Hindi Movies/($year)/" to "Hindi Movies",
+        "English Movies (1080p)/" to "English Movies",
+        "Hindi Movies/" to "Hindi Movies",
         "IMDb Top-250 Movies/" to "IMDb Top-250 Movies",
-        "SOUTH INDIAN MOVIES/Hindi Dubbed/($year)/" to "Hindi Dubbed",
-        "SOUTH INDIAN MOVIES/South Movies/$year/" to "South Movies",
-        "/KOREAN TV %26 WEB Series/" to "Korean TV & WEB Series"
+        "SOUTH INDIAN MOVIES/Hindi Dubbed/" to "Hindi Dubbed",
+        "SOUTH INDIAN MOVIES/South Movies/" to "South Movies",
+        "/KOREAN TV %26 WEB Series/" to "Korean TV & WEB Series",
+        "Kolkata Bangla Movies/" to "Kolkata Bangla Movies"
     )
 
     private fun cleanTitle(title: String): String {
@@ -97,7 +98,7 @@ open class BdixDhakaFlix14Provider : MainAPI() {
     private suspend fun getExternalMetadata(rawName: String, isTv: Boolean, fullDetails: Boolean = false): TmdbItem? {
         val clean = cleanTitle(rawName)
         val cacheKey = "${if (isTv) "tv" else "movie"}_$clean"
-        
+
         if (cache.containsKey(cacheKey) && (!fullDetails || cache[cacheKey]?.credits != null)) {
             return cache[cacheKey]
         }
@@ -124,7 +125,7 @@ open class BdixDhakaFlix14Provider : MainAPI() {
                     cacheTime = 60
                 ).parsed<TmdbItem>()
             } else search
-            
+
             cache[cacheKey] = result
             result
         } catch (e: Exception) {
@@ -132,14 +133,41 @@ open class BdixDhakaFlix14Provider : MainAPI() {
         }
     }
 
+    // Matches year sub-folders like "(2024)", "(2026)", "(1999) & Before"
+    private val yearFolderRegex = Regex("""\((\d{4})\)""")
+
     override suspend fun getMainPage(
         page: Int, request: MainPageRequest
     ): HomePageResponse = coroutineScope {
         val doc = app.get("$mainUrl/$serverName/${request.data}").document
-        val homeResponse = doc.select("tbody > tr:gt(1):lt(12)")
-        val home = homeResponse.map { post ->
-            async { getPostResult(post) }
-        }.awaitAll().filterNotNull()
+        val rows = doc.select("tbody > tr:gt(1)")
+
+        // Detect whether this listing is made of year sub-folders, e.g. "(2024)", "(2025)", "(2026)"
+        val yearFolders = rows.mapNotNull { row ->
+            val isFolder = row.selectFirst("td.fb-i > img")?.attr("alt") == "folder"
+            val text = row.selectFirst("td.fb-n > a")?.text().orEmpty()
+            val yearValue = yearFolderRegex.find(text)?.groupValues?.get(1)?.toIntOrNull()
+            if (isFolder && yearValue != null) yearValue to row else null
+        }.sortedByDescending { it.first } // newest year first
+
+        val home = if (yearFolders.isNotEmpty()) {
+            val collected = mutableListOf<SearchResponse>()
+            for ((_, row) in yearFolders) {
+                if (collected.size >= 12) break
+                val href = row.selectFirst("td.fb-n > a")?.attr("href") ?: continue
+                val subDoc = app.get(mainUrl + href).document
+                val items = subDoc.select("tbody > tr:gt(1)")
+                    .map { async { getPostResult(it) } }
+                    .awaitAll()
+                    .filterNotNull()
+                    .reversed() // newest uploads tend to be appended last in the listing
+                collected.addAll(items)
+            }
+            collected.take(12)
+        } else {
+            rows.take(12).map { async { getPostResult(it) } }.awaitAll().filterNotNull()
+        }
+
         newHomePageResponse(request.name, home, false)
     }
 
@@ -171,7 +199,7 @@ open class BdixDhakaFlix14Provider : MainAPI() {
             )
         val doc = app.post("$mainUrl/$serverName/", requestBody = body).text
         val searchJson = AppUtils.parseJson<SearchResult>(doc)
-        
+
         searchJson.search.take(40).map { post ->
             async {
                 if (post.size == null) {
@@ -179,7 +207,7 @@ open class BdixDhakaFlix14Provider : MainAPI() {
                     val name = nameFromUrl(href)
                     val url = if (href.startsWith("http")) href else mainUrl + href
                     val isTv = containsAnyLoop(url, tvSeriesKeyword)
-                    
+
                     // Metadata Enrichment for Search
                     val meta = getExternalMetadata(name, isTv)
                     val tmdbPoster = meta?.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
@@ -213,14 +241,14 @@ open class BdixDhakaFlix14Provider : MainAPI() {
         val meta = getExternalMetadata(rawName, isTv, fullDetails = true)
         val tmdbPoster = meta?.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
         val tmdbBackdrop = meta?.backdropPath?.let { "https://image.tmdb.org/t/p/w1280$it" }
-        
+
         // Local Poster Search
         val allImages = doc.select("td.fb-n > a[href~=(?i)\\.(png|jpe?g)]").map { it.attr("href") }
         val posterPath = allImages.find { img ->
             val lower = img.lowercase()
             lower.contains("a_al_") || lower.contains("a11") || lower.contains("poster") || lower.contains("folder")
         } ?: allImages.firstOrNull()
-        
+
         val localPoster = if (posterPath != null) mainUrl + posterPath else null
         val finalPoster = tmdbPoster ?: localPoster
 
