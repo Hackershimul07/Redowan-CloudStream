@@ -81,8 +81,7 @@ open class BdixDhakaFlix14Provider : MainAPI() {
         "IMDb Top-250 Movies/" to "IMDb Top-250 Movies",
         "SOUTH INDIAN MOVIES/Hindi Dubbed/" to "Hindi Dubbed",
         "SOUTH INDIAN MOVIES/South Movies/" to "South Movies",
-        "/KOREAN TV %26 WEB Series/" to "Korean TV & WEB Series",
-        "Kolkata Bangla Movies/" to "Kolkata Bangla Movies"
+        "/KOREAN TV %26 WEB Series/" to "Korean TV & WEB Series"
     )
 
     private fun cleanTitle(title: String): String {
