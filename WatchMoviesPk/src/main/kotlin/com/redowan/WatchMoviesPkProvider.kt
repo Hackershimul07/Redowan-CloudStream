@@ -8,8 +8,8 @@ import org.jsoup.nodes.Element
 
 class WatchMoviesPkProvider : MainAPI() {
 
-    override var mainUrl = "https://www.watch-movies.com.pk"
-    override var name = "WatchMoviesPk"
+    override var mainUrl = "https://southfreak.my"
+    override var name = "southfreak"
     override val hasMainPage = true
     override var lang = "hi"
     override val hasQuickSearch = false
