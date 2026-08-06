@@ -17,6 +17,7 @@ class CineFreakProvider : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
+        "" to "Latest Releases",
         "hindi-movies/" to "Hindi Movies",
         "english-movies/" to "English Movies",
         "bangla-movies/" to "Bangla Movies",
