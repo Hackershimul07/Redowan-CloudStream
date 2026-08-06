@@ -1,11 +1,11 @@
 // use an integer for version numbers
-version = 2
+version = 3
 
 cloudstream {
     // All of these properties are optional, you can safely remove any of them.
 
     language = "bn"
-    authors = listOf("Hackershimul07")
+    authors = listOf("Shimul_Ahmed")
 
     /**
      * Status int as one of the following:
