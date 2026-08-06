@@ -36,6 +36,7 @@ class XnxxProvider : MainAPI() {
         get() = listOf(
             "Stepbrother" to "$mainUrl/search/stepbrother",
             "Stepsister" to "$mainUrl/search/Stepsister",
+            "Stepmom" to "$mainUrl/search/Stepmom",
             "Family" to "$mainUrl/search/familial_relations",
             "Female Ejaculation" to "$mainUrl/search/female_ejaculation",
             "Stepdaughter" to "$mainUrl/search/stepdaughter",
