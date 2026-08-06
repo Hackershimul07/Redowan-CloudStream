@@ -30,6 +30,18 @@ class XnxxProvider : MainAPI() {
         TvType.NSFW
     )
 
+    // Categories that should always appear on the homepage, regardless of
+    // the random selection logic below.
+    private val forcedSections: List<Pair<String, String>>
+        get() = listOf(
+            "Stepbrother" to "$mainUrl/search/stepbrother",
+            "Stepsister" to "$mainUrl/search/Stepsister",
+            "Family" to "$mainUrl/search/familial_relations",
+            "Female Ejaculation" to "$mainUrl/search/female_ejaculation",
+            "Stepdaughter" to "$mainUrl/search/stepdaughter",
+            "Solo and Masturbation" to "$mainUrl/search/solo_and_masturbation"
+        )
+
     companion object {
         // ... (companion object giữ nguyên) ...
         fun getQualityFromString(quality: String?): SearchQuality? {
@@ -146,10 +158,12 @@ class XnxxProvider : MainAPI() {
                             validSectionsSource.find { it.second.endsWith("/todays-selection") }?.let { 
                                 sectionsToDisplayThisPage.add(it)
                             }
+                            // Always include our forced categories on the homepage.
+                            sectionsToDisplayThisPage.addAll(forcedSections)
                             
                             val otherSectionsPool = validSectionsSource.filterNot { sectionsToDisplayThisPage.map { sec -> sec.second }.contains(it.second) }.toMutableList()
                             
-                            val itemsPerHomePage = 5
+                            val itemsPerHomePage = 5 + forcedSections.size
                             val randomItemsNeeded = itemsPerHomePage - sectionsToDisplayThisPage.size
                             
                             if (randomItemsNeeded > 0 && otherSectionsPool.isNotEmpty()) {
