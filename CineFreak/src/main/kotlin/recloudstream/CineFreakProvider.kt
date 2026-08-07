@@ -148,6 +148,27 @@ class CineFreakProvider : MainAPI() {
         }
     }
 
+    // The "Download Links"/"Watch Online" buttons point to
+    // generate.php?id=BASE64. That page is a fake JS-driven ad/timer page
+    // that eventually runs `window.location.href = "<cinecloud url>"`.
+    // The BASE64 id decodes directly to that same CineCloud URL, just with
+    // a fixed junk suffix "newgo32" appended -- so we can skip generate.php
+    // entirely and jump straight to the CineCloud page.
+    private fun resolveCineCloudUrl(generatePhpUrl: String): String? {
+        return try {
+            val idParam = Regex("""[?&]id=([^&]+)""").find(generatePhpUrl)?.groupValues?.get(1)
+                ?: return null
+            val decodedBytes = java.util.Base64.getDecoder().decode(idParam)
+            var decoded = String(decodedBytes, Charsets.UTF_8)
+            if (decoded.endsWith("newgo32")) {
+                decoded = decoded.removeSuffix("newgo32")
+            }
+            decoded
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -166,13 +187,13 @@ class CineFreakProvider : MainAPI() {
             listOf(downloadUrl to "Download", watchUrl to "Watch").forEach { (link, kind) ->
                 if (link.isBlank()) return@forEach
                 try {
-                    // generate.php?id=BASE64 redirects to an intermediate
-                    // "CineCloud" host. That page contains a button
-                    // (class "fsl-btn"/"server-btn") whose href is already
-                    // the final direct video link (e.g. a
-                    // video-downloads.googleusercontent.com URL) -- no JS
-                    // execution needed, the href is present in the raw HTML.
-                    val resolvedDoc = app.get(link, allowRedirects = true).document
+                    val cineCloudUrl = resolveCineCloudUrl(link) ?: return@forEach
+
+                    // On the CineCloud page, the direct video link is
+                    // already present in the raw HTML as the href of the
+                    // "Instant Download" button (class "fsl-btn"), no JS
+                    // execution needed.
+                    val resolvedDoc = app.get(cineCloudUrl, allowRedirects = true).document
 
                     val directLink = resolvedDoc.selectFirst("a.fsl-btn")?.attr("href")
                         ?: resolvedDoc.selectFirst("a.server-btn")?.attr("href")
