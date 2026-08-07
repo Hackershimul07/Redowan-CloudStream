@@ -8,7 +8,7 @@ class CineFreakProvider : MainAPI() {
     override var mainUrl = "https://cinefreak.nl"
     override var name = "CineFreak"
     override val hasMainPage = true
-    override var lang = "bn"
+    override var lang = "en"
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(
         TvType.Movie,
@@ -166,19 +166,21 @@ class CineFreakProvider : MainAPI() {
             listOf(downloadUrl to "Download", watchUrl to "Watch").forEach { (link, kind) ->
                 if (link.isBlank()) return@forEach
                 try {
-                    // generate.php?id=BASE64 redirects (often via a JS/meta
-                    // refresh) to an intermediate host (e.g. cinecloud.site)
-                    // which should eventually expose a direct/GDrive link.
-                    // NOTE: the intermediate host's page structure was not
-                    // available while writing this, so this resolver is
-                    // best-effort and may need adjustment after testing.
+                    // generate.php?id=BASE64 redirects to an intermediate
+                    // "CineCloud" host. That page contains a button
+                    // (class "fsl-btn"/"server-btn") whose href is already
+                    // the final direct video link (e.g. a
+                    // video-downloads.googleusercontent.com URL) -- no JS
+                    // execution needed, the href is present in the raw HTML.
                     val resolvedDoc = app.get(link, allowRedirects = true).document
 
-                    val directLink = resolvedDoc.select("a[href*=.mkv], a[href*=.mp4], a[href*=drive.google.com], a[href*=workers.dev]")
-                        .map { it.attr("href") }
-                        .firstOrNull()
+                    val directLink = resolvedDoc.selectFirst("a.fsl-btn")?.attr("href")
+                        ?: resolvedDoc.selectFirst("a.server-btn")?.attr("href")
+                        ?: resolvedDoc.select("a[href*=googleusercontent.com], a[href*=.mkv], a[href*=.mp4], a[href*=drive.google.com]")
+                            .map { it.attr("href") }
+                            .firstOrNull()
 
-                    if (directLink != null) {
+                    if (!directLink.isNullOrBlank()) {
                         callback.invoke(
                             newExtractorLink(
                                 source = this.name,
